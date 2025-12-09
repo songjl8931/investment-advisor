@@ -1,0 +1,10 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Top Shape -->
+    <path d="M220 40 L360 40 L420 200 L160 250 Z" fill="#22c55e"/>
+    
+    <!-- Left Bottom Shape -->
+    <path d="M120 290 L270 260 L230 460 L80 400 Z" fill="#15803d"/>
+    
+    <!-- Right Bottom Shape -->
+    <path d="M300 240 L470 200 L430 450 L280 470 Z" fill="#4ade80"/>
+</svg>
