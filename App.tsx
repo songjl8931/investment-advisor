@@ -18,6 +18,7 @@ import { useAuth, AuthProvider } from './context/AuthContext';
 import { DataProvider, useData } from './context/DataContext';
 import { LoginPage } from './pages/LoginPage';
 import { AdminPanel } from './pages/AdminPanel';
+import AIStockSelection from './pages/AIStockSelection';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -315,6 +316,8 @@ const Dashboard: React.FC = () => {
       )}
 
       {currentPage === 'macro_data' && <MacroData />}
+
+      {currentPage === 'stock_selection' && <AIStockSelection />}
 
       <Modal isOpen={isAssetModalOpen} onClose={() => setIsAssetModalOpen(false)} title={editingAsset ? "编辑资产" : "录入新资产"}>
         <AssetForm 

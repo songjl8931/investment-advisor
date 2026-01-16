@@ -24,7 +24,7 @@ from typing import List, Optional, Dict, Any
 import akshare as ak
 import pandas as pd
 import datetime
-from app.routers import auth
+from app.routers import auth, strategies
 
 app = FastAPI()
 
@@ -43,6 +43,7 @@ async def startup_event():
 
 
 app.include_router(auth.router)
+app.include_router(strategies.router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -136,7 +137,8 @@ def chat_proxy(req: ChatRequest):
     }
     try:
         print(f"Proxying to {model_config['provider']}...")
-        resp = requests.post(model_config['base_url'], headers=headers, json=payload, timeout=60)
+        # Increase timeout to 180s for long generations
+        resp = requests.post(model_config['base_url'], headers=headers, json=payload, timeout=180)
         if resp.status_code != 200:
             print(f"API Error: {resp.text}")
             raise HTTPException(status_code=resp.status_code, detail=resp.text)

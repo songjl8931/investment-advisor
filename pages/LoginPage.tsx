@@ -53,10 +53,10 @@ export const LoginPage: React.FC = () => {
         if (isRegister) {
            setError(err.response?.data?.detail || '注册失败，用户名可能已存在');
         } else {
-           if (err.response?.status === 401) {
+           if (err.code === 'ERR_NETWORK') {
+              setError('无法连接服务器，请确保后台服务已启动 (python server.py)');
+           } else if (err.response?.status === 401) {
              setError('用户名或密码错误');
-           } else if (err.message === 'Network Error') {
-             setError('连接服务器失败，请检查网络或服务状态');
            } else {
              setError(err.response?.data?.detail || '登录失败，请重试');
            }

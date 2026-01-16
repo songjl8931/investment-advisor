@@ -26,6 +26,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onOpenSettings, onNavi
               <button onClick={() => onNavigate?.('dashboard')} className="hover:text-[#25b956] transition-colors">仪表盘</button>
               <button onClick={() => onNavigate?.('macro_data')} className="hover:text-[#25b956] transition-colors">宏观数据</button>
               <button onClick={() => onNavigate?.('ai_report')} className="hover:text-[#25b956] transition-colors">AI 研报</button>
+              <button onClick={() => onNavigate?.('stock_selection')} className="hover:text-[#25b956] transition-colors">AI 选股</button>
               {user?.role === 'admin' && (
                 <button onClick={() => navigate('/admin')} className="hover:text-[#25b956] transition-colors">后台管理</button>
               )}

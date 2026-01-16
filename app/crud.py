@@ -134,3 +134,72 @@ def save_models_bulk(db: Session, configs: list[schemas.ModelConfigCreate]):
         db_config = models.ModelConfig(**c.dict())
         db.add(db_config)
     db.commit()
+
+# Strategies
+def get_strategies(db: Session, user_id: int):
+    return db.query(models.Strategy).filter(models.Strategy.user_id == user_id).order_by(models.Strategy.priority.desc()).all()
+
+def create_strategy(db: Session, strategy: schemas.StrategyCreate, user_id: int):
+    db_strategy = models.Strategy(**strategy.dict(), user_id=user_id)
+    db.add(db_strategy)
+    db.commit()
+    db.refresh(db_strategy)
+    return db_strategy
+
+def update_strategy(db: Session, strategy_id: int, strategy: schemas.StrategyCreate, user_id: int):
+    db_strategy = db.query(models.Strategy).filter(models.Strategy.id == strategy_id, models.Strategy.user_id == user_id).first()
+    if db_strategy:
+        for key, value in strategy.dict().items():
+            setattr(db_strategy, key, value)
+        db.commit()
+        db.refresh(db_strategy)
+    return db_strategy
+
+def delete_strategy(db: Session, strategy_id: int, user_id: int):
+    db.query(models.Strategy).filter(models.Strategy.id == strategy_id, models.Strategy.user_id == user_id).delete()
+    db.commit()
+
+# Strategy Executions
+def get_executions(db: Session, strategy_id: int):
+    return db.query(models.StrategyExecution).filter(models.StrategyExecution.strategy_id == strategy_id).order_by(models.StrategyExecution.created_at.desc()).all()
+
+def get_execution(db: Session, execution_id: int):
+    return db.query(models.StrategyExecution).filter(models.StrategyExecution.id == execution_id).first()
+
+def create_execution(db: Session, strategy_id: int):
+    db_exec = models.StrategyExecution(strategy_id=strategy_id)
+    db.add(db_exec)
+    db.commit()
+    db.refresh(db_exec)
+    return db_exec
+
+def delete_execution(db: Session, execution_id: int):
+    # Recommendations should be deleted by cascade or manually
+    # Assuming cascade not set up perfectly in DB, delete manually
+    db.query(models.StockRecommendation).filter(models.StockRecommendation.execution_id == execution_id).delete()
+    db.query(models.StrategyExecution).filter(models.StrategyExecution.id == execution_id).delete()
+    db.commit()
+
+# Stock Recommendations
+def get_recommendations(db: Session, strategy_id: int = None, execution_id: int = None):
+    q = db.query(models.StockRecommendation)
+    if execution_id:
+        q = q.filter(models.StockRecommendation.execution_id == execution_id)
+    elif strategy_id:
+        q = q.filter(models.StockRecommendation.strategy_id == strategy_id)
+    
+    return q.order_by(models.StockRecommendation.date.desc()).all()
+
+def create_recommendation(db: Session, recommendation: schemas.StockRecommendationCreate):
+    db_rec = models.StockRecommendation(**recommendation.dict())
+    db.add(db_rec)
+    db.commit()
+    db.refresh(db_rec)
+    return db_rec
+
+def save_recommendations_bulk(db: Session, recommendations: list[schemas.StockRecommendationCreate], strategy_id: int):
+    # Optional: Clear old recommendations for this strategy/date? 
+    # For now, just append. Or maybe clear today's before appending to avoid duplicates.
+    # Let's assume the caller handles logic or we just append.
+    for r in recommendations:
+        create_recommendation(db, r)

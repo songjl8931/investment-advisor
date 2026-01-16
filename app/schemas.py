@@ -105,3 +105,60 @@ class ModelConfig(ModelConfigBase):
 
     class Config:
         orm_mode = True
+
+# Strategy
+class StrategyBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    params: dict
+    priority: int = 0
+    schedule_time: Optional[str] = None
+    is_active: bool = True
+
+class StrategyCreate(StrategyBase):
+    pass
+
+class Strategy(StrategyBase):
+    id: int
+    user_id: int
+    created_at: Any
+
+    class Config:
+        orm_mode = True
+
+# Strategy Execution
+class StrategyExecutionBase(BaseModel):
+    strategy_id: int
+    created_at: Any
+    ai_analysis: Optional[str] = None
+
+class StrategyExecution(StrategyExecutionBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+# Stock Recommendation
+class StockRecommendationBase(BaseModel):
+    symbol: str
+    name: str
+    date: str
+    price: float
+    change_percent: float
+    volume_ratio: float
+    turnover_rate: float
+    reason: dict
+
+class StockRecommendationCreate(StockRecommendationBase):
+    strategy_id: int
+    execution_id: int
+
+class StockRecommendation(StockRecommendationBase):
+    id: int
+    strategy_id: int
+    execution_id: Optional[int] = None
+    created_at: Any
+    strategy_name: Optional[str] = None # Helper for UI
+
+    class Config:
+        orm_mode = True
