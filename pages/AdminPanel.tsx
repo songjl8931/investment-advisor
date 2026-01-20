@@ -18,6 +18,7 @@ interface ModelConfig {
 
 const MODULE_OPTIONS = [
   { id: 'ai_report', label: 'AI 研报' },
+  { id: 'stock_selection', label: 'AI 选股' },
   { id: 'position_entry', label: '持仓录入' },
   // Reserved for future modules
   { id: 'market_analysis', label: '市场分析 (预留)' },
@@ -53,7 +54,7 @@ export const AdminPanel: React.FC = () => {
 
   const fetchModels = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/models');
+      const response = await axios.get('/api/models');
       setModels(response.data);
     } catch (error) {
       console.error("Failed to fetch models", error);
@@ -70,7 +71,7 @@ export const AdminPanel: React.FC = () => {
     }
     
     try {
-      await axios.post('http://localhost:8000/api/models', newModels);
+      await axios.post('/api/models', newModels);
       setModels(newModels);
       setIsEditing(false);
     } catch (error) {

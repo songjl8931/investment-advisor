@@ -8,6 +8,7 @@ interface ModelManagementProps {
 
 const MODULE_OPTIONS = [
   { value: 'ai_report', label: 'AI 研报' },
+  { value: 'stock_selection', label: 'AI 选股' },
   { value: 'position_entry', label: '持仓录入' },
   // { value: 'market_analysis', label: '市场分析' },
 ];

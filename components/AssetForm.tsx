@@ -45,7 +45,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAddAsset, onBatchAdd, in
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await axios.post('http://localhost:8000/api/recognize_assets', formData, {
+      const response = await axios.post('/api/recognize_assets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

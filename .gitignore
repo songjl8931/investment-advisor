@@ -19,6 +19,7 @@ user_models.json
 user_reports.json
 user_goals.json
 stock_cache.json
+stock_basic_cache.json
 
 # Logs
 logs
@@ -44,3 +45,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Deployment
+deploy_package.zip

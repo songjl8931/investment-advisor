@@ -50,7 +50,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onOpenSettings, onNavi
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 h-[calc(100vh-4rem)] flex flex-col">
         {children}
       </main>
     </div>

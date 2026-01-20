@@ -182,7 +182,3 @@ def execute_strategy(params: dict):
     except Exception as e:
         print(f"Strategy Execution Error: {e}")
         return []
-        
-    except Exception as e:
-        print(f"Strategy Execution Error: {e}")
-        return []

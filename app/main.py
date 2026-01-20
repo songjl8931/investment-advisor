@@ -3,46 +3,85 @@ def get_stock_info(symbol: str):
     try:
         import akshare as ak
         import pandas as pd
+        import tushare as ts
         
-        # 1. Basic Info (Industry, Market Cap, etc.)
-        info_df = ak.stock_individual_info_em(symbol=symbol)
-        # info_df has columns: item, value
-        info_dict = dict(zip(info_df['item'], info_df['value']))
+        # Tushare Init
+        ts.set_token('75b8d0b573634a0a14e351034c90aee85acf5370f1e865a6a56b7dce')
+        pro = ts.pro_api()
+
+        # Convert symbol to Tushare format
+        ts_code = symbol
+        if not symbol.endswith(('.SH', '.SZ', '.BJ')):
+             if symbol.startswith('6'):
+                 ts_code = f"{symbol}.SH"
+             elif symbol.startswith(('0', '3')):
+                 ts_code = f"{symbol}.SZ"
+             elif symbol.startswith(('4', '8')):
+                 ts_code = f"{symbol}.BJ"
         
-        # 2. Realtime Indicators (PE, PB) - Fetching single stock spot is tricky, 
-        # try to get from stock_zh_a_spot_em but filter? Too slow.
-        # Alternative: use stock_a_indicator_lg(symbol=symbol) for PE/PB (historical, take last)
-        # Or estimate from basic info if possible.
-        # Let's try stock_a_indicator_lg which returns daily indicators
+        # 1. Basic Info via Tushare (Replace ak.stock_individual_info_em)
+        # Fetch Company Profile
+        company_df = pro.stock_company(ts_code=ts_code)
+        # Fetch Basic Info (Industry, Name)
+        basic_df = pro.stock_basic(ts_code=ts_code)
+        
+        info_dict = {}
+        if not company_df.empty:
+            info_dict.update(company_df.iloc[0].to_dict())
+        if not basic_df.empty:
+            info_dict.update(basic_df.iloc[0].to_dict())
+
+        # 2. Realtime Indicators (PE, PB, Market Cap) from Akshare Spot
+        # Since Tushare daily_basic requires points/permissions we might not have, 
+        # we fallback to akshare spot for market data.
         
         pe_ttm = 0
         pb = 0
-        try:
-            # Get last row of indicators
-            indicators = ak.stock_a_indicator_lg(symbol=symbol)
-            if not indicators.empty:
-                last_row = indicators.iloc[-1]
-                pe_ttm = last_row.get('pe_ttm', 0)
-                pb = last_row.get('pb', 0)
-        except:
-            pass # Fallback if fails
-
-        # 3. Financials (Revenue/Profit Growth)
-        # ak.stock_financial_abstract(symbol=symbol) ??
-        # Let's use simple mock for growth if real data is too heavy, 
-        # or try to fetch key financial indicators.
+        total_mv = 0 # 亿
+        float_mv = 0 # 亿
         
+        try:
+            # Get real-time spot data for PE/PB/MarketCap
+            # Note: This fetches all stocks, might be slightly slow but reliable for real-time
+            spot_df = ak.stock_zh_a_spot_em()
+            # Filter by symbol
+            stock_spot = spot_df[spot_df['代码'] == symbol]
+            if not stock_spot.empty:
+                row = stock_spot.iloc[0]
+                pe_ttm = row.get('市盈率-动态', 0)
+                pb = row.get('市净率', 0)
+                total_mv = row.get('总市值', 0) / 100000000
+                float_mv = row.get('流通市值', 0) / 100000000
+        except Exception as e:
+            print(f"Market data fetch failed: {e}")
+            pass
+
+        # Construct Description from Tushare data
+        desc = ""
+        if 'introduction' in info_dict:
+             desc = info_dict['introduction']
+        else:
+             desc = f"上市公司: {info_dict.get('name', symbol)}，位于{info_dict.get('industry', '')}行业。"
+             if 'setup_date' in info_dict:
+                 desc += f" 成立日期: {info_dict['setup_date']}。"
+
         return {
             "symbol": symbol,
-            "name": info_dict.get('股票简称', symbol),
-            "industry": info_dict.get('行业', '未知'),
+            "name": info_dict.get('name', symbol), # From stock_basic
+            "industry": info_dict.get('industry', '未知'), # From stock_basic
             "pe_ttm": round(float(pe_ttm), 2) if pe_ttm else 0,
             "pb": round(float(pb), 2) if pb else 0,
-            "total_market_cap": round(float(info_dict.get('总市值', 0)) / 100000000, 2), # 亿
-            "float_market_cap": round(float(info_dict.get('流通市值', 0)) / 100000000, 2),
-            "revenue_growth": 0, # Placeholder as retrieving this is slow
+            "total_market_cap": round(float(total_mv), 2),
+            "float_market_cap": round(float(float_mv), 2),
+            "revenue_growth": 0, 
             "profit_growth": 0,
-            "description": f"上市公司: {info_dict.get('股票简称', symbol)}，位于{info_dict.get('行业', '')}行业。上市日期: {info_dict.get('上市时间', '')}。"
+            "description": desc,
+            "chairman": info_dict.get('chairman', ''),
+            "manager": info_dict.get('manager', ''),
+            "secretary": info_dict.get('secretary', ''),
+            "reg_capital": info_dict.get('reg_capital', 0),
+            "setup_date": info_dict.get('setup_date', ''),
+            "province": info_dict.get('province', '')
         }
     except Exception as e:
         print(f"Stock info error: {e}")

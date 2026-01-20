@@ -24,7 +24,7 @@ export const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/admin/users');
+      const response = await axios.get('/api/admin/users');
       setUsers(response.data);
     } catch (error) {
       console.error("Failed to fetch users", error);
@@ -35,7 +35,7 @@ export const UserManagement: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await axios.post('http://localhost:8000/api/admin/users', {
+      await axios.post('/api/admin/users', {
         username: currentUser.username,
         password: password,
         role: currentUser.role || 'user',
@@ -61,7 +61,7 @@ export const UserManagement: React.FC = () => {
         payload.password = password;
       }
       
-      await axios.put(`http://localhost:8000/api/admin/users/${currentUser.id}`, payload);
+      await axios.put(`/api/admin/users/${currentUser.id}`, payload);
       fetchUsers();
       setIsEditing(false);
       setCurrentUser({});
@@ -74,7 +74,7 @@ export const UserManagement: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('确定要删除该用户吗？此操作不可恢复。')) return;
     try {
-      await axios.delete(`http://localhost:8000/api/admin/users/${id}`);
+      await axios.delete(`/api/admin/users/${id}`);
       fetchUsers();
     } catch (err: any) {
       alert(err.response?.data?.detail || '删除失败');

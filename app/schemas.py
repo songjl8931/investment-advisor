@@ -162,3 +162,14 @@ class StockRecommendation(StockRecommendationBase):
 
     class Config:
         orm_mode = True
+
+class StockTrackingItem(BaseModel):
+    id: int
+    symbol: str
+    name: str
+    strategy_name: str
+    execution_date: str
+    recommend_price: float
+    current_price: float
+    return_percent: float
+    execution_id: int

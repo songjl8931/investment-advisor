@@ -29,7 +29,7 @@ export const LoginPage: React.FC = () => {
     
     try {
       if (isRegister) {
-        await axios.post('http://localhost:8000/api/auth/register', {
+        await axios.post('/api/auth/register', {
           username: formUsername,
           password: formPassword
         });
@@ -41,11 +41,11 @@ export const LoginPage: React.FC = () => {
         apiFormData.append('username', formUsername);
         apiFormData.append('password', formPassword);
 
-        const response = await axios.post('http://localhost:8000/api/auth/token', apiFormData, {
+        const response = await axios.post('/api/auth/token', apiFormData, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
 
-        login(response.data.access_token, rememberMe);
+        await login(response.data.access_token, rememberMe);
         navigate('/');
       }
     } catch (err: any) {

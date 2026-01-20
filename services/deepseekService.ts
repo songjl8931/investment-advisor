@@ -4,7 +4,7 @@ import { calculateTechnicalIndicators } from "../utils/technicalData";
 import axios from 'axios';
 
 // DeepSeek API endpoint (proxied via local backend)
-const API_URL = "http://localhost:8000/api/chat";
+const API_URL = "/api/chat";
 
 export interface AnalysisResult {
   content: string;

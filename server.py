@@ -23,6 +23,7 @@ import base64
 from typing import List, Optional, Dict, Any
 import akshare as ak
 import pandas as pd
+import tushare as ts
 import datetime
 from app.routers import auth, strategies
 
@@ -706,6 +707,167 @@ def get_macro():
         return {
             "cpi": [], "ppi": [], "lpr": [], "gdp": [], "deposit_volume": []
         }
+
+# --- Stock Basic Info Cache (Tushare) ---
+STOCK_BASIC_CACHE_FILE = "stock_basic_cache.json"
+stock_basic_cache = {}
+
+def load_stock_basic_cache():
+    global stock_basic_cache
+    if os.path.exists(STOCK_BASIC_CACHE_FILE):
+        try:
+            with open(STOCK_BASIC_CACHE_FILE, 'r', encoding='utf-8') as f:
+                stock_basic_cache = json.load(f)
+        except:
+            stock_basic_cache = {}
+
+def save_stock_basic_cache():
+    try:
+        with open(STOCK_BASIC_CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(stock_basic_cache, f, ensure_ascii=False)
+    except:
+        pass
+
+# Initialize cache
+load_stock_basic_cache()
+
+@app.get("/api/stock_info/{symbol}")
+def get_stock_info(symbol: str):
+    try:
+        # Convert symbol to Tushare format
+        ts_code = symbol
+        if not symbol.endswith(('.SH', '.SZ', '.BJ')):
+             if symbol.startswith('6'):
+                 ts_code = f"{symbol}.SH"
+             elif symbol.startswith(('0', '3')):
+                 ts_code = f"{symbol}.SZ"
+             elif symbol.startswith(('4', '8')):
+                 ts_code = f"{symbol}.BJ"
+        
+        # 1. Basic Info (Check Cache First)
+        info_dict = {}
+        use_cache = False
+        
+        if symbol in stock_basic_cache:
+            cached = stock_basic_cache[symbol]
+            last_updated = cached.get('updated_at', 0)
+            # 30 days * 24 * 3600 = 2592000 seconds
+            if time.time() - last_updated < 2592000:
+                print(f"DEBUG: Using cached basic info for {symbol}")
+                info_dict = cached.get('data', {})
+                use_cache = True
+        
+        if not use_cache:
+            print(f"DEBUG: Fetching new basic info for {symbol} from Tushare")
+            # Tushare Init
+            ts.set_token('75b8d0b573634a0a14e351034c90aee85acf5370f1e865a6a56b7dce')
+            pro = ts.pro_api()
+
+            company_df = pd.DataFrame()
+            basic_df = pd.DataFrame()
+            
+            try:
+                 company_df = pro.stock_company(ts_code=ts_code)
+            except Exception as e:
+                 print(f"Tushare stock_company fetch failed: {e}")
+    
+            try:
+                 basic_df = pro.stock_basic(ts_code=ts_code)
+            except Exception as e:
+                 print(f"Tushare stock_basic fetch failed: {e}")
+    
+            if not company_df.empty:
+                info_dict.update(company_df.iloc[0].to_dict())
+            if not basic_df.empty:
+                info_dict.update(basic_df.iloc[0].to_dict())
+            
+            # Save to cache if we got data
+            if info_dict:
+                stock_basic_cache[symbol] = {
+                    "updated_at": time.time(),
+                    "data": info_dict
+                }
+                save_stock_basic_cache()
+
+        # 2. Realtime Indicators (PE, PB, Market Cap)
+        # Use Akshare individual info for market data (faster than spot list)
+        pe_ttm = 0
+        pb = 0
+        total_mv = 0 
+        float_mv = 0
+        
+        try:
+            # ak.stock_individual_info_em returns a dataframe with 'item' and 'value'
+            # Items: 总市值, 流通市值, 市盈率(动), 市净率, 行业, etc.
+            em_df = ak.stock_individual_info_em(symbol=symbol)
+            em_dict = dict(zip(em_df['item'], em_df['value']))
+            
+            pe_ttm = em_dict.get('市盈率(动)', 0)
+            pb = em_dict.get('市净率', 0)
+            total_mv = em_dict.get('总市值', 0) / 100000000
+            float_mv = em_dict.get('流通市值', 0) / 100000000
+            
+            # Fallback for name/industry if Tushare failed
+            if 'name' not in info_dict:
+                info_dict['name'] = em_dict.get('股票简称', symbol)
+            if 'industry' not in info_dict or info_dict['industry'] == '未知':
+                info_dict['industry'] = em_dict.get('行业', '未知')
+                
+        except Exception as e:
+            print(f"Akshare market data fetch failed: {e}")
+            # Fallback to spot if individual fails (rare)
+            try:
+                spot_df = ak.stock_zh_a_spot_em()
+                stock_spot = spot_df[spot_df['代码'] == symbol]
+                if not stock_spot.empty:
+                    row = stock_spot.iloc[0]
+                    pe_ttm = row.get('市盈率-动态', 0)
+                    pb = row.get('市净率', 0)
+                    total_mv = row.get('总市值', 0) / 100000000
+                    float_mv = row.get('流通市值', 0) / 100000000
+            except:
+                pass
+
+        # Construct Description
+        desc = ""
+        if 'introduction' in info_dict:
+             desc = info_dict['introduction']
+        else:
+             desc = f"上市公司: {info_dict.get('name', symbol)}，位于{info_dict.get('industry', '')}行业。"
+             if 'setup_date' in info_dict:
+                 desc += f" 成立日期: {info_dict['setup_date']}。"
+
+        return {
+            "symbol": symbol,
+            "name": info_dict.get('name', symbol),
+            "industry": info_dict.get('industry', '未知'),
+            "area": info_dict.get('area', ''),
+            "market": info_dict.get('market', ''),
+            "list_date": info_dict.get('list_date', ''),
+            "pe_ttm": round(float(pe_ttm), 2) if pe_ttm else 0,
+            "pb": round(float(pb), 2) if pb else 0,
+            "total_market_cap": round(float(total_mv), 2),
+            "float_market_cap": round(float(float_mv), 2),
+            "revenue_growth": 0, 
+            "profit_growth": 0,
+            "description": desc,
+            "chairman": info_dict.get('chairman', ''),
+            "manager": info_dict.get('manager', ''),
+            "secretary": info_dict.get('secretary', ''),
+            "reg_capital": info_dict.get('reg_capital', 0),
+            "setup_date": info_dict.get('setup_date', ''),
+            "province": info_dict.get('province', ''),
+            "city": info_dict.get('city', ''),
+            "website": info_dict.get('website', ''),
+            "email": info_dict.get('email', ''),
+            "office": info_dict.get('office', ''),
+            "employees": info_dict.get('employees', 0),
+            "main_business": info_dict.get('main_business', ''),
+            "business_scope": info_dict.get('business_scope', '')
+        }
+    except Exception as e:
+        print(f"Stock info error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

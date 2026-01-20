@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import axios from 'axios';
 
 // Configure axios base URL
-const API_URL = 'http://localhost:8000/api';
+const API_URL = '/api';
 
 interface User {
   username: string;
@@ -47,19 +47,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const login = (token: string, remember: boolean = true) => {
+  const login = async (token: string, remember: boolean = true) => {
     if (remember) {
       localStorage.setItem('token', token);
     } else {
       sessionStorage.setItem('token', token);
     }
     // Fetch user details immediately
-    axios.get(`${API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    .then(response => {
+    try {
+      const response = await axios.get(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setUser(response.data);
-    });
+    } catch (error) {
+      console.error("Failed to fetch user details during login", error);
+      // Optional: Clear token if fetching user fails?
+      // localStorage.removeItem('token');
+      // sessionStorage.removeItem('token');
+    }
   };
 
   const logout = () => {

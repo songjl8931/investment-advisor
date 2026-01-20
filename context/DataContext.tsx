@@ -74,7 +74,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!macroData || force) {
           try {
             // Updated endpoint to /api/macro to match server.py
-            const macroRes = await fetch('http://localhost:8000/api/macro');
+            const macroRes = await fetch('/api/macro');
             if (macroRes.ok) {
                 const macroResult = await macroRes.json();
                 // Data format from server.py is already { date: '...', value: ... }
